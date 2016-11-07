@@ -57,15 +57,15 @@ static void LoadDeviceData() {
 
     strcpy(g_DeviceObj.manufacturer, "Imagination");
     strcpy(g_DeviceObj.deviceType, "Creator Ci40");
-    strcpy(g_DeviceObj.modelNumber, "TODO: from where?");
-    strcpy(g_DeviceObj.serialNumber, "TODO: from where?");
-    strcpy(g_DeviceObj.hardwareVersion, "TODO: from where?");
+    strcpy(g_DeviceObj.modelNumber, "Ci40");    //TODO: is it ok?
+    strcpy(g_DeviceObj.serialNumber, "TODO: from where?");//https://github.com/CreatorDev/proddata/blob/master/src/flash_access.cc
+    strcpy(g_DeviceObj.hardwareVersion, "TODO: from where?");//init.c -> get_system_type
     strcpy(g_DeviceObj.firmwareVersion, "TODO: from where?");
     g_DeviceObj.errorCode = 0;
-    for (int t = 0; t < MAX_POWER_SOURCES; t++) {
+/*    for (int t = 0; t < MAX_POWER_SOURCES; t++) {
         g_DeviceObj.powerSources[t] = PowerSource_NONE;
     }
-    g_DeviceObj.powerSources[0] = PowerSource_MAIN_SUPPLY;
+    g_DeviceObj.powerSources[0] = PowerSource_MAIN_SUPPLY;*/
 }
 
 int main(int argc, char **argv) {

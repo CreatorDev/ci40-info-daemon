@@ -49,7 +49,15 @@ typedef enum {
     MultipleInstancesEnum_MULTIPLE = LWM2M_MAX_ID,
 } MultipleInstancesEnum;
 
+typedef enum {
+    CallbackIdentifier_TIME,
+    CallbackIdentifier_TIME_OFFSET,
+    CallbackIdentifier_TIME_ZONE
+} CallbackIdentifier;
+
 DeviceObject g_DeviceObj;
+
+int g_callbackIdentifier[] = {CallbackIdentifier_TIME, CallbackIdentifier_TIME_OFFSET, CallbackIdentifier_TIME_ZONE};
 
 static void RebootExecuteCallback(const AwaExecuteArguments* arguments, void * context) {
     const char* userData = (const char*) context;
@@ -66,25 +74,27 @@ static void FactoryRestetExecuteCallback(const AwaExecuteArguments* arguments, v
     exit(0);
 }
 
-static void changeCallback(const AwaChangeSet* changeSet, void * context) {
-    const char* userData = (const char*) context;
-    LOG(LOG_INFO, "Callback received. Context = %s\n", userData);
-
-    const char* value;
+static void OnTimeChangedCallback(const AwaChangeSet* changeSet, void* context) {
+    LOG(LOG_INFO, "Requested time change.\n");
     const AwaTime* tvalue;
-    if (!strcmp(userData, TIMEZONE)) {
-        AwaChangeSet_GetValueAsCStringPointer(changeSet, TIMEZONE, &value);
-        printf("Value of resource %s changed to: %s\n", TIMEZONE, value);
-
-    } else if (!strcmp(userData, UTCOFFSET)) {
-        AwaChangeSet_GetValueAsCStringPointer(changeSet, UTCOFFSET, &value);
-        printf("Value of resource %s changed to: %s\n", UTCOFFSET, value);
-
-    } else if (!strcmp(userData, CURRENT_TIME)) {
-        AwaChangeSet_GetValueAsTimePointer(changeSet, CURRENT_TIME, &tvalue);
-        printf("Value of resource %s changed to: %ld\n", CURRENT_TIME, (long int) tvalue);
-    }
+    AwaChangeSet_GetValueAsTimePointer(changeSet, CURRENT_TIME, &tvalue);
+    LOG(LOG_INFO, "Value of resource %s changed to: %ld\n", CURRENT_TIME, (long int) tvalue);
+    time_t newTime = (time_t)tvalue;
+    stime(&newTime);
 }
+
+static void OnTimeZoneChangedCallback(const AwaChangeSet* changeSet, void* context) {
+    const char* value;
+    AwaChangeSet_GetValueAsCStringPointer(changeSet, TIMEZONE, &value);
+    LOG(LOG_INFO, "Requested time zone change.\n");
+
+}
+
+static void OnTimeOffsetChangedCallback(const AwaChangeSet* changeSet, void* context) {
+    const char* value;
+    AwaChangeSet_GetValueAsCStringPointer(changeSet, UTCOFFSET, &value);
+}
+
 
 static void DefineDeviceObject(AwaClientSession* session) {
     AwaObjectDefinition * objectDefinition = AwaObjectDefinition_New(atoi(DEVICE_OBJECT_ID), "Device", 1, 1);
@@ -140,79 +150,72 @@ static void DefineDeviceObject(AwaClientSession* session) {
     AwaClientDefineOperation_Free(&operation);
 }
 
-static void UpdateManufacturerName(AwaClientSession* session) {
-    /* Create SET operation */
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
+static void UpdateVolatileResources(AwaClientSetOperation* operation) {
+    //Time related
+    time_t t = time(NULL);
+    struct tm lt = { 0 };
+    localtime_r(&t, &lt);
+    char str[DEVICE_MAX_BUFF];
+    sprintf(str, "%lds", lt.tm_gmtoff);
+
+    AwaClientSetOperation_AddValueAsTime(operation, CURRENT_TIME, time(&t));
+    AwaClientSetOperation_AddValueAsCString(operation, TIMEZONE, lt.tm_zone);
+    AwaClientSetOperation_AddValueAsCString(operation, UTCOFFSET, str);
+
+    //Error code
+    AwaIntegerArray* errorcodeArray = AwaIntegerArray_New();
+    AwaIntegerArray_SetValue(errorcodeArray, 0, g_DeviceObj.errorCode);
+    AwaClientSetOperation_AddValueAsIntegerArray(operation, ERROR_CODE, errorcodeArray);
+    AwaIntegerArray_Free(&errorcodeArray);
+
+    struct statvfs data;
+    int ret = statvfs("/dev/root", &data);
+    if (ret == 0) {
+        uint64_t bytes = data.f_bsize * data.f_bfree;
+        AwaClientSetOperation_AddValueAsInteger(operation, MEMORY_FREE, bytes);
+    }
     /*
-     * This example uses resource /3/0/0 which is the Manufacturer
-     * resource in the standard Device object. It is a string.
-     */
-    /* Provide a path and value for the resource */
+    UpdateAvailablePowerSources(session);
+    UpdatePowerSourceVoltage(session);
+    UpdatePowerSourceCurrent(session);
+    */
+}
+
+static void UpdateAllResources(AwaClientSetOperation* operation) {
     AwaClientSetOperation_AddValueAsCString(operation, MANUFACTURER, g_DeviceObj.manufacturer);
-    /* Perform the SET operation */
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    /* Operations must be freed after use */
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateDeviceType(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, DEVICE_TYPE, g_DeviceObj.deviceType);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateModelNumber(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, MODEL_NUMBER, g_DeviceObj.modelNumber);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateSerialNumber(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, SERIAL_NUMBER, g_DeviceObj.serialNumber);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateHardwareVersion(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, HARDWARE_VERSION, g_DeviceObj.hardwareVersion);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateFirmwareVersion(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, FIRMWARE_VERSION, g_DeviceObj.firmwareVersion);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdateSoftwareVersion(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     AwaClientSetOperation_AddValueAsCString(operation, SOFTWARE_VERSION, g_DeviceObj.softwareVersion);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
+    AwaClientSetOperation_AddValueAsInteger(operation, BATTERY_LEVEL, g_DeviceObj.batteryLevel);
+    UpdateVolatileResources(operation);
 }
 
-static void SubscribeForReboot(AwaClientSession* session) {
-    const char* userData = REBOOT;
-    AwaClientExecuteSubscription* subscription = AwaClientExecuteSubscription_New(REBOOT, RebootExecuteCallback,
-            (void*) userData);
+static void SubscribeToChanges(AwaClientSession* session) {
     AwaClientSubscribeOperation* subscribeOperation = AwaClientSubscribeOperation_New(session);
-    AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
-    AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSubscribeOperation_Free(&subscribeOperation);
-}
 
-static void SubscribeForFactoryReset(AwaClientSession* session) {
-    const char* userData = FACTORY_RESET;
-    AwaClientExecuteSubscription* subscription = AwaClientExecuteSubscription_New(FACTORY_RESET,
-            FactoryRestetExecuteCallback, (void*) userData);
-    AwaClientSubscribeOperation* subscribeOperation = AwaClientSubscribeOperation_New(session);
+    //Execution callback
+    AwaClientExecuteSubscription* subscription = AwaClientExecuteSubscription_New(REBOOT, RebootExecuteCallback, NULL);
     AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
+
+    subscription = AwaClientExecuteSubscription_New(FACTORY_RESET, FactoryRestetExecuteCallback, NULL);
+    AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
+
+    //Changes callback
+    AwaClientChangeSubscription* changeSub = AwaClientChangeSubscription_New(TIMEZONE, OnTimeZoneChangedCallback,
+                (void*) &g_callbackIdentifier[CallbackIdentifier_TIME_ZONE]);
+    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
+
+    changeSub = AwaClientChangeSubscription_New(UTCOFFSET, OnTimeOffsetChangedCallback,
+            (void*) &g_callbackIdentifier[CallbackIdentifier_TIME_OFFSET]);
+    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
+
+    changeSub = AwaClientChangeSubscription_New(CURRENT_TIME, OnTimeChangedCallback,
+                (void*)  &g_callbackIdentifier[CallbackIdentifier_TIME]);
+    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
+
     AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
     AwaClientSubscribeOperation_Free(&subscribeOperation);
 }
@@ -253,109 +256,6 @@ static void UpdatePowerSourceCurrent(AwaClientSession* session) {
     AwaClientSetOperation_Free(&operation);
 }
 
-static void UpdateBatteryLevel(AwaClientSession* session) {
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsInteger(operation, BATTERY_LEVEL, g_DeviceObj.batteryLevel);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-void UpdateTimezone(AwaClientSession* session) {
-}
-
-static void Timezone(AwaClientSession* session) {
-    /* Application-specific data */
-    const char* userData = TIMEZONE;
-
-    time_t t = time(NULL);
-    struct tm lt = { 0 };
-    localtime_r(&t, &lt);
-    printf("The time zone is '%s'.\n", lt.tm_zone);
-
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsCString(operation, TIMEZONE, lt.tm_zone);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-
-    AwaClientChangeSubscription *subscription = AwaClientChangeSubscription_New(TIMEZONE, changeCallback,
-            (void*) userData);
-    /* Start listening to notifications */
-    AwaClientSubscribeOperation * subscribeOperation = AwaClientSubscribeOperation_New(session);
-    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, subscription);
-    AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSubscribeOperation_Free(&subscribeOperation);
-}
-
-void UpdateUTCOffset(AwaClientSession* session) {
-}
-
-static void UTCOffset(AwaClientSession* session) {
-    /* Application-specific data */
-    const char* userData = UTCOFFSET;
-    char str[DEVICE_MAX_BUFF];
-
-    time_t t = time(NULL);
-    struct tm lt = { 0 };
-    localtime_r(&t, &lt);
-    printf("Offset to GMT is %lds.\n", lt.tm_gmtoff);
-    sprintf(str, "%lds", lt.tm_gmtoff);
-
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsCString(operation, UTCOFFSET, str);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-
-    AwaClientChangeSubscription *subscription = AwaClientChangeSubscription_New(UTCOFFSET, changeCallback,
-            (void*) userData);
-    /* Start listening to notifications */
-    AwaClientSubscribeOperation * subscribeOperation = AwaClientSubscribeOperation_New(session);
-    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, subscription);
-    AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSubscribeOperation_Free(&subscribeOperation);
-}
-
-/*see timers.c to set CurrentTime*/
-void UpdateCurrentTime(AwaClientSession* session) {
-}
-
-/*see timers.c to get CurrentTime*/
-static void CurrentTime(AwaClientSession* session) {
-    /* Application-specific data */
-    const char* userData = CURRENT_TIME;
-    char str[DEVICE_MAX_BUFF];
-
-    time_t t = time(NULL);
-    struct tm lt = { 0 };
-    localtime_r(&t, &lt);
-    printf("System %ld\n", time(&t));
-    sprintf(str, "%ld", time(&t));
-
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsTime(operation, CURRENT_TIME, time(&t));
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-
-    AwaClientChangeSubscription *subscription = AwaClientChangeSubscription_New(CURRENT_TIME, changeCallback,
-            (void*) userData);
-    /* Start listening to notifications */
-    AwaClientSubscribeOperation * subscribeOperation = AwaClientSubscribeOperation_New(session);
-    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, subscription);
-    AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSubscribeOperation_Free(&subscribeOperation);
-}
-
-static void UpdateErrorCode(AwaClientSession* session) {
-    //this resource got multiple instances
-    AwaIntegerArray * ErrorcodeArray = AwaIntegerArray_New();
-    //create instace 0 value DeviceObj.ErrorCode
-    AwaIntegerArray_SetValue(ErrorcodeArray, 0, g_DeviceObj.errorCode);
-
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-
-    AwaClientSetOperation_AddValueAsIntegerArray(operation, ERROR_CODE, ErrorcodeArray);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
 
 static void CreateDeviceInstance(AwaClientSession* session) {
     AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
@@ -386,49 +286,22 @@ static void CreateDeviceInstance(AwaClientSession* session) {
     AwaClientSetOperation_Free(&operation);
 }
 
-static void UpdateMemory(AwaClientSession* session) {
-    struct statvfs data;
-    int ret = statvfs("/dev/root", &data);
-    if (ret == 0) {
-        uint64_t bytes = data.f_bsize * data.f_bfree;
-        AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-        AwaClientSetOperation_AddValueAsInteger(operation, MEMORY_FREE, bytes);
-        AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-        AwaClientSetOperation_Free(&operation);
-    }
-}
-
 void InitDevice(AwaClientSession* session) {
     DefineDeviceObject(session);
     CreateDeviceInstance(session);
-    UpdateManufacturerName(session);
-    UpdateDeviceType(session);
-    UpdateModelNumber(session);
-    UpdateSerialNumber(session);
-    UpdateHardwareVersion(session);
-    UpdateFirmwareVersion(session);
-    SubscribeForReboot(session);
-    SubscribeForFactoryReset(session);
-    UpdateSoftwareVersion(session);
-    UpdateAvailablePowerSources(session);
-    UpdatePowerSourceVoltage(session);
-    UpdatePowerSourceCurrent(session);
-    UpdateBatteryLevel(session);
-    Timezone(session);
-    UTCOffset(session);
-    CurrentTime(session);
-    UpdateErrorCode(session);
-    UpdateMemory(session);
+
+    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
+    UpdateAllResources(operation);
+    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
+    AwaClientSetOperation_Free(&operation);
+
+    SubscribeToChanges(session);
 }
 
 void DeviceControl(AwaClientSession* session) {
-    UpdateBatteryLevel(session);
-    UpdateAvailablePowerSources(session);
-    UpdatePowerSourceVoltage(session);
-    UpdatePowerSourceCurrent(session);
-    UpdateMemory(session);
-    Timezone(session);
-    UTCOffset(session);
-    CurrentTime(session);
-    UpdateErrorCode(session);
+
+    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
+    UpdateVolatileResources(operation);
+    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
+    AwaClientSetOperation_Free(&operation);
 }

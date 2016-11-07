@@ -69,11 +69,13 @@ typedef enum{
 #define OPERATION_PERFORM_TIMEOUT   30
 
 typedef enum {
-    PowerSource_NONE,
-    PowerSource_MAIN_SUPPLY,
+    PowerSource_DC_POWER,
+    PowerSource_INTERNAL_BATTERY,
+    PowerSource_EXTERNAL_BATTERY,
+    PowerSource_POWER_OVER_ETHERNET,
     PowerSource_USB,
-    PowerSource_ETHERNET,
-    PowerSource_BATTERY
+    PowerSource_AC_MAINS_POWER,
+    PowerSource_SOLAR
 } PowerSource;
 
 #define MAX_POWER_SOURCES 4
