@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/utsname.h>
+#include <mtd/mtd-user.h>
 
 #include <awa/common.h>
 #include <awa/client.h>
@@ -49,23 +50,53 @@ static void ExitApp(int ignore) {
     g_running = false;
 }
 
+
+static void GetSerialNumber(char* buffer, int bufferSize) {
+  FILE *fp;
+  char tmpBuf[1035];
+
+  fp = popen("iw dev|grep addr", "r");
+  if (fp == NULL) {
+    printf("Failed to obtain serial number.\n" );
+    exit(1);
+  }
+
+
+  fgets(tmpBuf, sizeof(tmpBuf)-1, fp);
+  const char *ptr = strchr(tmpBuf, 'r');
+  if (ptr != NULL) {
+      int index = ptr - tmpBuf;
+      index += 2;   //skip 'r' and space
+      int len = strlen(tmpBuf);
+      for(;index < len; index++) {
+          char c = tmpBuf[index];
+          if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+              *buffer = c;
+              buffer++;
+              bufferSize--;
+              if (bufferSize == 1) {
+                  break;
+              }
+          }
+      }
+      *buffer = 0;
+  }
+  pclose(fp);
+}
+
 static void LoadDeviceData() {
 
     struct utsname unameData;
     uname(&unameData);
     snprintf(g_DeviceObj.softwareVersion, DEVICE_MAX_BUFF, "%s: %s", unameData.release, unameData.version);
+    GetSerialNumber(g_DeviceObj.serialNumber, DEVICE_MAX_BUFF);
 
     strcpy(g_DeviceObj.manufacturer, "Imagination");
     strcpy(g_DeviceObj.deviceType, "Creator Ci40");
     strcpy(g_DeviceObj.modelNumber, "Ci40");    //TODO: is it ok?
-    strcpy(g_DeviceObj.serialNumber, "TODO: from where?");//https://github.com/CreatorDev/proddata/blob/master/src/flash_access.cc
-    strcpy(g_DeviceObj.hardwareVersion, "TODO: from where?");//init.c -> get_system_type
+    strcpy(g_DeviceObj.hardwareVersion, "TODO: from where?");
     strcpy(g_DeviceObj.firmwareVersion, "TODO: from where?");
     g_DeviceObj.errorCode = 0;
-/*    for (int t = 0; t < MAX_POWER_SOURCES; t++) {
-        g_DeviceObj.powerSources[t] = PowerSource_NONE;
-    }
-    g_DeviceObj.powerSources[0] = PowerSource_MAIN_SUPPLY;*/
 }
 
 int main(int argc, char **argv) {
@@ -81,8 +112,8 @@ int main(int argc, char **argv) {
     while (g_running) {
         AwaClientSession_Process(session, OPERATION_PERFORM_TIMEOUT);
         AwaClientSession_DispatchCallbacks(session);
-        DeviceControl(session);
-        sleep(30);
+        UpdateDeviceInfo(session);
+        sleep(1);
     }
 
     AwaClientSession_Disconnect(session);

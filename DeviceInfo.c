@@ -49,15 +49,7 @@ typedef enum {
     MultipleInstancesEnum_MULTIPLE = LWM2M_MAX_ID,
 } MultipleInstancesEnum;
 
-typedef enum {
-    CallbackIdentifier_TIME,
-    CallbackIdentifier_TIME_OFFSET,
-    CallbackIdentifier_TIME_ZONE
-} CallbackIdentifier;
-
 DeviceObject g_DeviceObj;
-
-int g_callbackIdentifier[] = {CallbackIdentifier_TIME, CallbackIdentifier_TIME_OFFSET, CallbackIdentifier_TIME_ZONE};
 
 static void RebootExecuteCallback(const AwaExecuteArguments* arguments, void * context) {
     const char* userData = (const char*) context;
@@ -82,19 +74,6 @@ static void OnTimeChangedCallback(const AwaChangeSet* changeSet, void* context) 
     time_t newTime = (time_t)tvalue;
     stime(&newTime);
 }
-
-static void OnTimeZoneChangedCallback(const AwaChangeSet* changeSet, void* context) {
-    const char* value;
-    AwaChangeSet_GetValueAsCStringPointer(changeSet, TIMEZONE, &value);
-    LOG(LOG_INFO, "Requested time zone change.\n");
-
-}
-
-static void OnTimeOffsetChangedCallback(const AwaChangeSet* changeSet, void* context) {
-    const char* value;
-    AwaChangeSet_GetValueAsCStringPointer(changeSet, UTCOFFSET, &value);
-}
-
 
 static void DefineDeviceObject(AwaClientSession* session) {
     AwaObjectDefinition * objectDefinition = AwaObjectDefinition_New(atoi(DEVICE_OBJECT_ID), "Device", 1, 1);
@@ -174,11 +153,6 @@ static void UpdateVolatileResources(AwaClientSetOperation* operation) {
         uint64_t bytes = data.f_bsize * data.f_bfree;
         AwaClientSetOperation_AddValueAsInteger(operation, MEMORY_FREE, bytes);
     }
-    /*
-    UpdateAvailablePowerSources(session);
-    UpdatePowerSourceVoltage(session);
-    UpdatePowerSourceCurrent(session);
-    */
 }
 
 static void UpdateAllResources(AwaClientSetOperation* operation) {
@@ -189,7 +163,6 @@ static void UpdateAllResources(AwaClientSetOperation* operation) {
     AwaClientSetOperation_AddValueAsCString(operation, HARDWARE_VERSION, g_DeviceObj.hardwareVersion);
     AwaClientSetOperation_AddValueAsCString(operation, FIRMWARE_VERSION, g_DeviceObj.firmwareVersion);
     AwaClientSetOperation_AddValueAsCString(operation, SOFTWARE_VERSION, g_DeviceObj.softwareVersion);
-    AwaClientSetOperation_AddValueAsInteger(operation, BATTERY_LEVEL, g_DeviceObj.batteryLevel);
     UpdateVolatileResources(operation);
 }
 
@@ -204,58 +177,12 @@ static void SubscribeToChanges(AwaClientSession* session) {
     AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
 
     //Changes callback
-    AwaClientChangeSubscription* changeSub = AwaClientChangeSubscription_New(TIMEZONE, OnTimeZoneChangedCallback,
-                (void*) &g_callbackIdentifier[CallbackIdentifier_TIME_ZONE]);
-    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
-
-    changeSub = AwaClientChangeSubscription_New(UTCOFFSET, OnTimeOffsetChangedCallback,
-            (void*) &g_callbackIdentifier[CallbackIdentifier_TIME_OFFSET]);
-    AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
-
-    changeSub = AwaClientChangeSubscription_New(CURRENT_TIME, OnTimeChangedCallback,
-                (void*)  &g_callbackIdentifier[CallbackIdentifier_TIME]);
+    AwaClientChangeSubscription* changeSub = AwaClientChangeSubscription_New(CURRENT_TIME, OnTimeChangedCallback, NULL);
     AwaClientSubscribeOperation_AddChangeSubscription(subscribeOperation, changeSub);
 
     AwaClientSubscribeOperation_Perform(subscribeOperation, OPERATION_PERFORM_TIMEOUT);
     AwaClientSubscribeOperation_Free(&subscribeOperation);
 }
-
-static void UpdateAvailablePowerSources(AwaClientSession* session) {
-    //this resource got multiple instances
-    AwaIntegerArray * power_source1 = AwaIntegerArray_New();
-    for(int t = 0; t < MAX_POWER_SOURCES; t++) {
-        AwaIntegerArray_SetValue(power_source1, t, g_DeviceObj.powerSources[t]);
-    }
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsIntegerArray(operation, AVAILABLE_POWER_SOURCES, power_source1);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdatePowerSourceVoltage(AwaClientSession* session) {
-    //this resource got multiple instances
-    AwaIntegerArray * source_array = AwaIntegerArray_New();
-    for(int t = 0; t < MAX_POWER_SOURCES; t++) {
-        AwaIntegerArray_SetValue(source_array, t, g_DeviceObj.powerSourceVoltage[t]);
-    }
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsIntegerArray(operation, POWER_SOURCE_VOLTAGE, source_array);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
-static void UpdatePowerSourceCurrent(AwaClientSession* session) {
-    //this resource got multiple instances
-    AwaIntegerArray * source_array = AwaIntegerArray_New();
-    for(int t = 0; t < MAX_POWER_SOURCES; t++) {
-        AwaIntegerArray_SetValue(source_array, t, g_DeviceObj.powerSourceCurrent[t]);
-    }
-    AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
-    AwaClientSetOperation_AddValueAsIntegerArray(operation, POWER_SOURCE_CURRENT, source_array);
-    AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
-    AwaClientSetOperation_Free(&operation);
-}
-
 
 static void CreateDeviceInstance(AwaClientSession* session) {
     AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
@@ -273,13 +200,9 @@ static void CreateDeviceInstance(AwaClientSession* session) {
     AwaClientSetOperation_CreateOptionalResource(operation, UTCOFFSET);
     AwaClientSetOperation_CreateOptionalResource(operation, TIMEZONE);
     AwaClientSetOperation_CreateOptionalResource(operation, ERROR_CODE);
-    AwaClientSetOperation_CreateOptionalResource(operation, POWER_SOURCE_VOLTAGE);
-    AwaClientSetOperation_CreateOptionalResource(operation, POWER_SOURCE_CURRENT);
     AwaClientSetOperation_CreateOptionalResource(operation, SUPPORTED_BINGING_AND_MODES);
     AwaClientSetOperation_CreateOptionalResource(operation, RESET_ERROR_CODE);
     AwaClientSetOperation_CreateOptionalResource(operation, MEMORY_FREE);
-    AwaClientSetOperation_CreateOptionalResource(operation, AVAILABLE_POWER_SOURCES);
-    AwaClientSetOperation_CreateOptionalResource(operation, BATTERY_LEVEL);
     AwaClientSetOperation_CreateOptionalResource(operation, FACTORY_RESET);
 
     AwaClientSetOperation_Perform(operation, OPERATION_PERFORM_TIMEOUT);
@@ -298,7 +221,7 @@ void InitDevice(AwaClientSession* session) {
     SubscribeToChanges(session);
 }
 
-void DeviceControl(AwaClientSession* session) {
+void UpdateDeviceInfo(AwaClientSession* session) {
 
     AwaClientSetOperation* operation = AwaClientSetOperation_New(session);
     UpdateVolatileResources(operation);

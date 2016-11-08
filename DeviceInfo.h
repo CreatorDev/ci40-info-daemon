@@ -89,6 +89,7 @@ typedef struct{
     char firmwareVersion[DEVICE_MAX_BUFF];
     char softwareVersion[DEVICE_MAX_BUFF];
     int errorCode;
+    int availPowerSources;
     int powerSourceVoltage[MAX_POWER_SOURCES];
     int powerSourceCurrent[MAX_POWER_SOURCES];
     int batteryLevel;
@@ -99,6 +100,6 @@ extern DeviceObject g_DeviceObj;
 
 
 void InitDevice(AwaClientSession* session);
-void DeviceControl(AwaClientSession* session);
+void UpdateDeviceInfo(AwaClientSession* session);
 
 #endif /* __DEVICE_INFO_H__ */
