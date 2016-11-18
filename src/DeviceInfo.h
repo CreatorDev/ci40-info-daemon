@@ -85,8 +85,6 @@ typedef struct{
     char deviceType[DEVICE_MAX_BUFF];
     char modelNumber[DEVICE_MAX_BUFF];
     char serialNumber[DEVICE_MAX_BUFF];
-    char hardwareVersion[DEVICE_MAX_BUFF];
-    char firmwareVersion[DEVICE_MAX_BUFF];
     char softwareVersion[DEVICE_MAX_BUFF];
     int errorCode;
     int availPowerSources;

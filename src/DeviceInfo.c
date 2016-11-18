@@ -84,8 +84,6 @@ static void DefineDeviceObject(AwaClientSession* session) {
             AwaResourceOperations_ReadOnly, NULL);
     AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 2, "SerialNumber", MandatoryEnum_OPTIONAL,
             AwaResourceOperations_ReadOnly, NULL);
-    AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 3, "FirmwareVersion", MandatoryEnum_OPTIONAL,
-            AwaResourceOperations_ReadOnly, NULL);
     AwaObjectDefinition_AddResourceDefinitionAsNoType(objectDefinition, 4, "Reboot", MandatoryEnum_MANDATORY,
             AwaResourceOperations_Execute);
     AwaObjectDefinition_AddResourceDefinitionAsNoType(objectDefinition, 5, "FactoryReset", MandatoryEnum_OPTIONAL,
@@ -113,8 +111,6 @@ static void DefineDeviceObject(AwaClientSession* session) {
     AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 16, "SupportedBindingandModes",
             MandatoryEnum_MANDATORY, AwaResourceOperations_ReadOnly, NULL);
     AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 17, "DeviceType", MandatoryEnum_OPTIONAL,
-            AwaResourceOperations_ReadOnly, NULL);
-    AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 18, "HardwareVersion", MandatoryEnum_OPTIONAL,
             AwaResourceOperations_ReadOnly, NULL);
     AwaObjectDefinition_AddResourceDefinitionAsString(objectDefinition, 19, "SoftwareVersion", MandatoryEnum_OPTIONAL,
             AwaResourceOperations_ReadOnly, NULL);
@@ -160,8 +156,6 @@ static void UpdateAllResources(AwaClientSetOperation* operation) {
     AwaClientSetOperation_AddValueAsCString(operation, DEVICE_TYPE, g_DeviceObj.deviceType);
     AwaClientSetOperation_AddValueAsCString(operation, MODEL_NUMBER, g_DeviceObj.modelNumber);
     AwaClientSetOperation_AddValueAsCString(operation, SERIAL_NUMBER, g_DeviceObj.serialNumber);
-    AwaClientSetOperation_AddValueAsCString(operation, HARDWARE_VERSION, g_DeviceObj.hardwareVersion);
-    AwaClientSetOperation_AddValueAsCString(operation, FIRMWARE_VERSION, g_DeviceObj.firmwareVersion);
     AwaClientSetOperation_AddValueAsCString(operation, SOFTWARE_VERSION, g_DeviceObj.softwareVersion);
     UpdateVolatileResources(operation);
 }
@@ -192,8 +186,6 @@ static void CreateDeviceInstance(AwaClientSession* session) {
     AwaClientSetOperation_CreateOptionalResource(operation, DEVICE_TYPE);
     AwaClientSetOperation_CreateOptionalResource(operation, MODEL_NUMBER);
     AwaClientSetOperation_CreateOptionalResource(operation, SERIAL_NUMBER);
-    AwaClientSetOperation_CreateOptionalResource(operation, HARDWARE_VERSION);
-    AwaClientSetOperation_CreateOptionalResource(operation, FIRMWARE_VERSION);
     AwaClientSetOperation_CreateOptionalResource(operation, SOFTWARE_VERSION);
     AwaClientSetOperation_CreateOptionalResource(operation, CURRENT_TIME);
     AwaClientSetOperation_CreateOptionalResource(operation, REBOOT);

@@ -94,8 +94,6 @@ static void LoadDeviceData() {
     strcpy(g_DeviceObj.manufacturer, "Imagination");
     strcpy(g_DeviceObj.deviceType, "Creator Ci40");
     strcpy(g_DeviceObj.modelNumber, "Ci40");    //TODO: is it ok?
-    strcpy(g_DeviceObj.hardwareVersion, "TODO: from where?");
-    strcpy(g_DeviceObj.firmwareVersion, "TODO: from where?");
     g_DeviceObj.errorCode = 0;
 }
 
