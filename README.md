@@ -1,11 +1,22 @@
-# CI 40 onboarding app
-![](docs/img.png)
----
-Info Daemon is a helper project which complements [Awa client daemon](https://github.com/FlowM2M/AwaLWM2M). Main purpose of having this process running is to fill with data [IPSO Object Id 3](http://www.ipso-alliance.org/wp-content/uploads/2016/01/ipso-paper.pdf). In standard form most of described in specification resources are handled, however due to platform limitations, or specific needs of end user some adjustments might be needed.
+![](http://static.creatordev.io/logo.png)
+# Ci40 Info Daemon
 
-## Pre Requirements
+Visit us at [forum.creatordev.io](http://forum.creatordev.io) for support and discussion
+---
+Info Daemon is a helper project which complements [Awa client daemon](https://github.com/FlowM2M/AwaLWM2M). The main purpose of having this process running is to fill IPSO Object Id 3 with data. Most of the resources in the specification are handled, however due to platform limitations or project requirements, some adjustments may be needed.
+
+
+## Prerequisites
 
 The only needed requirements is to have up and running Awa Client Daemon which will be filled with data by Info Daemon.
+
+## How to install
+
+Easiest way of installing the **Info Daemon** is using opkg package manager.
+
+    opkg install info-daemon
+
+Alternatively you can compile it yourself.
 
 ## Resources handled by daemon.
 
@@ -33,3 +44,7 @@ The following resources in IPSO object 3 are managed:
 | 17 | DEVICE_TYPE | "Creator Ci40" |
 | 18 | HARDWARE_VERSION | Not supported. |
 | 19 | SOFTWARE_VERSION | _Version of Creator Image_ |
+
+## Contributing
+
+If you have a contribution to make please follow the processes laid out in [contributor guide](CONTRIBUTING.md).
