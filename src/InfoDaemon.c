@@ -93,7 +93,7 @@ static void LoadDeviceData() {
 
     strcpy(g_DeviceObj.manufacturer, "Imagination");
     strcpy(g_DeviceObj.deviceType, "Creator Ci40");
-    strcpy(g_DeviceObj.modelNumber, "Ci40");    //TODO: is it ok?
+    strcpy(g_DeviceObj.modelNumber, "Ci40");
     g_DeviceObj.errorCode = 0;
 }
 
