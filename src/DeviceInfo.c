@@ -58,7 +58,7 @@ static void RebootExecuteCallback(const AwaExecuteArguments* arguments, void * c
     exit(0);
 }
 
-static void FactoryRestetExecuteCallback(const AwaExecuteArguments* arguments, void * context) {
+static void FactoryResetExecuteCallback(const AwaExecuteArguments* arguments, void * context) {
     const char* userData = (const char*) context;
     LOG(LOG_WARN, "Request for Factory Reset from context: %s", userData);
     LOG(LOG_ERR, "At this moment it just do this same as reset, add implementation you need here!");
@@ -167,7 +167,7 @@ static void SubscribeToChanges(AwaClientSession* session) {
     AwaClientExecuteSubscription* subscription = AwaClientExecuteSubscription_New(REBOOT, RebootExecuteCallback, NULL);
     AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
 
-    subscription = AwaClientExecuteSubscription_New(FACTORY_RESET, FactoryRestetExecuteCallback, NULL);
+    subscription = AwaClientExecuteSubscription_New(FACTORY_RESET, FactoryResetExecuteCallback, NULL);
     AwaClientSubscribeOperation_AddExecuteSubscription(subscribeOperation, subscription);
 
     //Changes callback
