@@ -84,7 +84,7 @@ static void GetSerialNumber(char* buffer, int bufferSize) {
   pclose(fp);
 }
 
-static void LoadDeviceData() {
+static void LoadDeviceData(void) {
 
     struct utsname unameData;
     uname(&unameData);
