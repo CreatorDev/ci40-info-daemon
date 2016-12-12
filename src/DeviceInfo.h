@@ -59,7 +59,7 @@
 #define OBJECT_INSTANCE(obj, inst) "/" obj "/" #inst
 
 typedef enum{
-  INSTANCE_0 = 0,
+  INSTANCE_0,
   INSTANCE_1,
   INSTANCE_2,
   INSTANCE_3,

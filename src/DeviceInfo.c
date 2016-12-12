@@ -40,8 +40,8 @@
 #define LWM2M_MAX_ID (65535)
 
 typedef enum {
-    MandatoryEnum_OPTIONAL = 0,
-    MandatoryEnum_MANDATORY = 1,
+    MandatoryEnum_OPTIONAL,
+    MandatoryEnum_MANDATORY,
 } MandatoryEnum;
 
 typedef enum {
