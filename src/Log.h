@@ -66,8 +66,9 @@
     do {                                                        \
         if (level <= g_debugLevel)                              \
         {                                                       \
-            sem_wait(&g_debugSemapthore);                       \
             if (g_debugStream == NULL)                          \
+                break;                                          \
+            sem_wait(&g_debugSemapthore);                       \
                 g_debugStream = stdout;                         \
             fprintf(g_debugStream, "\n");                       \
             if (g_debugLevel == LOG_DBG)                        \

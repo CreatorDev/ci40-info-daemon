@@ -40,7 +40,7 @@
 #include "Log.h"
 #include "DeviceInfo.h"
 
-FILE* g_debugStream = NULL;
+FILE* g_debugStream;
 int g_debugLevel = LOG_INFO;
 sem_t g_debugSemapthore;
 static volatile bool g_running = true;
@@ -102,10 +102,11 @@ int main(int argc, char **argv) {
         .sa_handler = ExitApp,
         .sa_flags = 0
     };
+    g_debugStream = stdout;
+    sem_init(&g_debugSemapthore, 0, 1);
+
     sigemptyset(&action.sa_mask);
     sigaction (SIGINT, &action, NULL);
-
-    sem_init(&g_debugSemapthore, 0, 1);
 
     AwaClientSession * session = AwaClientSession_New();
     AwaClientSession_Connect(session);
