@@ -43,7 +43,7 @@
 FILE* g_debugStream = NULL;
 int g_debugLevel = LOG_INFO;
 sem_t g_debugSemapthore;
-bool g_running;
+static volatile bool g_running = true;
 
 static void ExitApp(int ignore) {
     printf("Exiting...\n");
@@ -98,9 +98,14 @@ static void LoadDeviceData(void) {
 }
 
 int main(int argc, char **argv) {
+    struct sigaction action = {
+        .sa_handler = ExitApp,
+        .sa_flags = 0
+    };
+    sigemptyset(&action.sa_mask);
+    sigaction (SIGINT, &action, NULL);
+
     sem_init(&g_debugSemapthore, 0, 1);
-    signal(SIGINT, ExitApp);
-    g_running = true;
 
     AwaClientSession * session = AwaClientSession_New();
     AwaClientSession_Connect(session);
