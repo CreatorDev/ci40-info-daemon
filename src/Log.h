@@ -54,32 +54,31 @@
 
 /** Macro for printing logging message with current time, function and line no. DOn't use directly*/
 #define DEBUG_PRINT                                                                 \
-	do {                                                                            \
-		time_t currentTime = time(NULL);                                            \
-		char buffer[TIME_BUFFER_SIZE] = {0};                                        \
-		strftime(buffer, TIME_BUFFER_SIZE, "%x %X", localtime(&currentTime));       \
-		fprintf(g_debugStream,"[%s] %s:%d: ", buffer, __FILENAME__, __LINE__);      \
-	} while (0)
+    do {                                                                            \
+        time_t currentTime = time(NULL);                                            \
+        char buffer[TIME_BUFFER_SIZE] = {0};                                        \
+        strftime(buffer, TIME_BUFFER_SIZE, "%x %X", localtime(&currentTime));       \
+        fprintf(g_debugStream,"[%s] %s:%d: ", buffer, __FILENAME__, __LINE__);      \
+    } while (0)
 
 /** Macro for logging message at the specified level. */
 #define LOG(level, ...)                                         \
-	do {                                                        \
-		if (level <= g_debugLevel)                              \
-		{                                                       \
-		    sem_wait(&g_debugSemapthore);                         \
-			if (g_debugStream == NULL)                          \
-				g_debugStream = stdout;                         \
-			fprintf(g_debugStream, "\n");                       \
-			if (g_debugLevel == LOG_DBG)                        \
-			{                                                   \
-				DEBUG_PRINT;                                    \
-			}                                                   \
-			fprintf(g_debugStream, __VA_ARGS__);                \
-			fprintf(g_debugStream, "\n");                       \
-			fflush(g_debugStream);                              \
-			sem_post(&g_debugSemapthore);                         \
-		}                                                       \
-	} while (0)
+    do {                                                        \
+        if (level <= g_debugLevel)                              \
+        {                                                       \
+            if (g_debugStream == NULL)                          \
+                break;                                          \
+            sem_wait(&g_debugSemapthore);                       \
+                g_debugStream = stdout;                         \
+            fprintf(g_debugStream, "\n");                       \
+            if (g_debugLevel == LOG_DBG)                        \
+                DEBUG_PRINT;                                    \
+            fprintf(g_debugStream, __VA_ARGS__);                \
+            fprintf(g_debugStream, "\n");                       \
+            fflush(g_debugStream);                              \
+            sem_post(&g_debugSemapthore);                       \
+        }                                                       \
+    } while (0)
 
 /** Output stream to dump logs. */
 extern FILE *g_debugStream;
@@ -88,4 +87,4 @@ extern int g_debugLevel;
 
 extern sem_t g_debugSemapthore;
 
-#endif	/* LOG_H */
+#endif    /* LOG_H */
