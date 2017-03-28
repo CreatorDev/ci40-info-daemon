@@ -39,6 +39,7 @@
 
 #include "Log.h"
 #include "DeviceInfo.h"
+#include "FirmwareUpdate.h"
 
 FILE* g_debugStream = NULL;
 int g_debugLevel = LOG_INFO;
@@ -106,14 +107,19 @@ int main(int argc, char **argv) {
     AwaClientSession_Connect(session);
     LoadDeviceData();
     InitDevice(session);
+    firmwareUpdate_Init(session);
 
     while (g_running) {
         AwaClientSession_Process(session, OPERATION_PERFORM_TIMEOUT);
         AwaClientSession_DispatchCallbacks(session);
+
         UpdateDeviceInfo(session);
+        firmwareUpdate_UpdateInfo(session);
+
         sleep(1);
     }
 
+    firmwareUpdate_Shutdown(session);
     AwaClientSession_Disconnect(session);
     AwaClientSession_Free(&session);
     return 0;
